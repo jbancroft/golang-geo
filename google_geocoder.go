@@ -1,6 +1,9 @@
 package geo
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,12 +44,25 @@ func SetGoogleGeocodeURL(newGeocodeURL string) {
 	googleGeocodeURL = newGeocodeURL
 }
 
+var (
+	GoogleApiKey   string
+	GoogleClientId string
+)
+
 // Issues a request to the google geocoding service and forwards the passed in params string
 // as a URL-encoded entity.  Returns an array of byes as a result, or an error if one occurs during the process.
 func (g *GoogleGeocoder) Request(params string) ([]byte, error) {
 	client := &http.Client{}
 
-	fullUrl := fmt.Sprintf("%s?sensor=false&%s", googleGeocodeURL, params)
+	fullPath := fmt.Sprintf("/maps/api/geocode/json?sensor=false&%s", params)
+	if GoogleApiKey != "" && GoogleClientId != "" {
+		signature, err := sign(fullPath)
+		if err != nil {
+			return nil, err
+		}
+		fullPath = fmt.Sprintf("%s&signature=%s", fullPath, signature)
+	}
+	fullUrl := fmt.Sprintf("http://maps.googleapis.com%s", fullPath)
 
 	// TODO Potentially refactor out from MapQuestGeocoder as well
 	req, _ := http.NewRequest("GET", fullUrl, nil)
@@ -63,6 +79,20 @@ func (g *GoogleGeocoder) Request(params string) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func sign(path string) (string, error) {
+	rawPrivateKey, err := base64.StdEncoding.DecodeString(GoogleApiKey)
+	if err != nil {
+		return "", err
+	}
+	hash := hmac.New(sha1.New, rawPrivateKey)
+	_, err = hash.Write([]byte(path))
+	if err != nil {
+		return "", err
+	}
+	signature := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	return signature, nil
 }
 
 // Geocodes the passed in query string and returns a pointer to a new Point struct.
