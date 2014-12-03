@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type GoogleGeocoder struct{}
@@ -56,7 +57,9 @@ func (g *GoogleGeocoder) Request(params string) ([]byte, error) {
 }
 
 func sign(path string) (string, error) {
-	rawPrivateKey, err := base64.StdEncoding.DecodeString(GoogleApiKey)
+	apiKey := strings.Replace(GoogleApiKey, "-", "+", -1)
+	apiKey = strings.Replace(apiKey, "_", "/", -1)
+	rawPrivateKey, err := base64.StdEncoding.DecodeString(apiKey)
 	if err != nil {
 		return "", err
 	}
@@ -66,6 +69,8 @@ func sign(path string) (string, error) {
 		return "", err
 	}
 	signature := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	signature = strings.Replace(signature, "+", "-", -1)
+	signature = strings.Replace(signature, "/", "_", -1)
 	return signature, nil
 }
 
