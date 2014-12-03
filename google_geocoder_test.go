@@ -8,6 +8,28 @@ import (
 	"testing"
 )
 
+func TestGeocode(t *testing.T) {
+  g := &GoogleGeocoder{}
+
+  if os.Getenv("GOOGLE_API_KEY") == "" || os.Getenv("GOOGLE_CLIENT_ID") == "" || os.Getenv("GOOGLE_CHANNEL") == "" {
+    return
+  }
+
+  GoogleApiKey = os.Getenv("GOOGLE_API_KEY")
+  GoogleClientId = os.Getenv("GOOGLE_CLIENT_ID")
+  GoogleChannel = os.Getenv("GOOGLE_CHANNEL")
+
+  p, err := g.Geocode("285 Bedford Avenue, Brooklyn, NY 11211, USA")
+  if err != nil {
+    t.Error(err.Error())
+    return
+  }
+
+  if fmt.Sprintf("%f", p.Lat()) != "40.714042" || fmt.Sprintf("%f", p.Lng()) != "-73.961312" {
+    t.Error(fmt.Sprintf("Expected: [40.714042, -73.961312], Got: [%f, %f]", p.Lat(), p.Lng()))
+  }
+}
+
 /// TODO Test extracting Address from Google Reverse Geocoding Response
 func TestExtractAddressFromResponse(t *testing.T) {
 	g := &GoogleGeocoder{}
